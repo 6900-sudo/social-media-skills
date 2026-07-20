@@ -76,18 +76,22 @@ Never paste the key into chat. Chat content can end up in transcripts and logs. 
 
 ### Key tools
 
-The connector exposes a large tool set. These are the ones this system leans on:
+The connector exposes 28 tools, all prefixed `opusclip_`. These are the ones this system leans on:
 
 | Tool | What it does |
 |---|---|
-| `clip` | Cut highlight clips from a long video |
-| `find_viral_moments` | Score moments in a video for clip potential |
-| `caption` | Add animated subtitles |
-| `reframe` | Convert aspect ratio with subject tracking (16:9 to 9:16) |
-| `repurpose` | Re-edit a clip natively for a target platform |
-| `schedule_post` | Queue a finished clip to social accounts |
+| `opusclip_submit_project` | Submit a video for AI clipping. OpusClip finds and scores the best moments |
+| `opusclip_create_upload_link` | Get an upload link for a local video file |
+| `opusclip_list_clips` / `opusclip_describe_clip` | Browse and inspect the generated clips |
+| `opusclip_apply_editing_script` | Edit a clip: trim, reframe, layout, captions |
+| `opusclip_get_transcript` | Pull the transcript |
+| `opusclip_create_thumbnail_job` | Generate thumbnail options for a clip |
+| `opusclip_create_social_copy_job` | Generate titles, descriptions and hashtags per platform |
+| `opusclip_export_clip` | Export a finished clip |
+| `opusclip_schedule_publish` | Schedule a clip to connected social accounts |
+| `opusclip_get_usage` | Check remaining credits before a batch run |
 
-Beyond these, the server can generate thumbnails and platform-specific social copy (titles, descriptions, hashtags), pull transcripts, group clips into collections, and report remaining credits on your plan.
+The rest cover collections (`create_collection`, `add_clip_to_collection`, `export_collection`), publishing (`list_social_accounts`, `create_post_task`, `unschedule_publish`), brand templates, censoring, sharing and account info (`whoami`).
 
 ### Where it fits in this system
 
@@ -95,21 +99,23 @@ Beyond these, the server can generate thumbnails and platform-specific social co
 newsletter → reels-scripting → record long-form
                                     │
                                     ▼
-                          OpusClip MCP
-                clip → caption → reframe → schedule_post
+                             OpusClip MCP
+      submit_project → apply_editing_script → export_clip → schedule_publish
                                     │
                                     ▼
                     Reels, Shorts, TikTok, LinkedIn video
 ```
 
 - `reels-scripting` writes the script and caption. OpusClip handles the edit and distribution after you record.
-- Longer recordings (YouTube videos, webinars, podcast episodes) go straight to `clip` and `find_viral_moments` to mine shorts without a new script.
-- `schedule_post` replaces manual uploading. The caption and comment trigger from `reels-scripting` paste straight into the scheduled post.
+- Longer recordings (YouTube videos, webinars, podcast episodes) go straight to `opusclip_submit_project` to mine scored shorts without a new script.
+- `opusclip_schedule_publish` replaces manual uploading. The caption and comment trigger from `reels-scripting` paste straight into the scheduled post, and `opusclip_create_social_copy_job` drafts platform variants.
 
 ### Notes
 
-- Clipping and exporting spend OpusClip credits from your connected account. Check your plan before batch runs.
-- The server needs a hosted video URL or an OpusClip project to work on. Upload or import your recording to OpusClip first if it only exists locally.
+- **Plan requirement**: MCP and API access needs the Pro, Max or Enterprise plan. On the free plan the connector signs in and lists tools, but every call except `whoami` returns an upgrade error. After upgrading, reconnect the connector to refresh the tool list.
+- Clipping spends credits, roughly 1 credit per minute of source video. Check headroom with `opusclip_get_usage` before batch runs.
+- The connector is locked to the organisation picked at connect time. To switch orgs, disconnect and reconnect.
+- The server works on a hosted video URL or an OpusClip project. For local files, get a link with `opusclip_create_upload_link` first.
 - The API key endpoint sits on the same base as OpusClip's REST API (`https://api.opus.pro/api`). One key covers both.
 - The server is listed in the official MCP Registry as `io.github.opus-pro/opusclip`.
 - Official docs: [opus.pro/mcp](https://www.opus.pro/mcp) and [help.opus.pro/api-reference/agent-setup](https://help.opus.pro/api-reference/agent-setup).
