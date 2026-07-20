@@ -8,11 +8,16 @@ This page documents the servers that pair with these skills.
 
 OpusClip turns long-form video into short, captioned, vertical clips. Its MCP server exposes those tools to Claude, so the video side of this system can run end to end: script with `reels-scripting`, record, then clip, caption, reframe and schedule through OpusClip in the same chat.
 
-- **Endpoint**: `https://mcp.opus.pro/mcp`
-- **Transport**: Streamable HTTP
-- **Auth**: OAuth. Sign in once with your OpusClip account. Your plan and credits carry through.
+The server is hosted and speaks streamable HTTP. There are two endpoints, one per auth method:
 
-### Setup
+| Endpoint | Auth | Use when |
+|---|---|---|
+| `https://mcp.opus.pro/mcp` | OAuth (browser sign-in) | Interactive clients: Claude web and desktop, Claude Code on your machine, Cursor |
+| `https://api.opus.pro/api/mcp` | API key (`Authorization: Bearer`) | Headless or remote environments where a browser sign-in flow is not possible |
+
+Your OpusClip plan and credits carry through on both.
+
+### Setup with OAuth
 
 **Claude Code**
 
@@ -29,6 +34,18 @@ Settings, then Connectors, then Add custom connector. Paste `https://mcp.opus.pr
 **Cursor and other MCP clients**
 
 Add the same URL as a remote HTTP MCP server in your client's MCP settings.
+
+### Setup with an API key
+
+For CI, servers, or any client that cannot open a browser. Create a key in the OpusClip dashboard under API Access, then export it in the shell that launches your agent:
+
+```bash
+export OPUSCLIP_API_KEY=your_key
+claude mcp add --transport http opusclip https://api.opus.pro/api/mcp \
+  --header "Authorization: Bearer ${OPUSCLIP_API_KEY}"
+```
+
+Never paste the key into chat. Chat content can end up in transcripts and logs. Set it as an environment variable like the other keys in this repo's [prerequisites](README.md#prerequisites).
 
 ### Key tools
 
@@ -64,4 +81,5 @@ newsletter → reels-scripting → record long-form
 
 - Clipping and exporting spend OpusClip credits from your connected account. Check your plan before batch runs.
 - The server needs a hosted video URL or an OpusClip project to work on. Upload or import your recording to OpusClip first if it only exists locally.
+- The API key endpoint sits on the same base as OpusClip's REST API (`https://api.opus.pro/api`). One key covers both.
 - Official docs: [opus.pro/mcp](https://www.opus.pro/mcp) and [help.opus.pro/api-reference/agent-setup](https://help.opus.pro/api-reference/agent-setup).
