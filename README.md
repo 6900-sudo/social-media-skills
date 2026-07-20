@@ -180,6 +180,10 @@ export GOOGLE_AI_API_KEY=your_key
 
 The image generation skills (`gemini-infographic`, `gemini-carousel`, `quote-post`, `youtube-thumbnail`, `profile-optimizer`) output ready-to-paste prompts. You run them in a separate Gemini chat with Create Image enabled. No API key needed.
 
+## MCP servers
+
+The video side of the system pairs with the [OpusClip MCP server](MCP.md) (`https://mcp.opus.pro/mcp`). Script with `reels-scripting`, record, then clip, caption, reframe and schedule through OpusClip without leaving the chat. See [MCP.md](MCP.md) for setup and the tool list.
+
 ## Contributing
 
 PRs and issues welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on adding or improving skills.
