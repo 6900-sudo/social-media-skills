@@ -33,7 +33,34 @@ Settings, then Connectors, then Add custom connector. Paste `https://mcp.opus.pr
 
 **Cursor and other MCP clients**
 
-Add the same URL as a remote HTTP MCP server in your client's MCP settings.
+Add the same URL as a remote HTTP MCP server in your client's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "opusclip": {
+      "url": "https://mcp.opus.pro/mcp"
+    }
+  }
+}
+```
+
+**Stdio-only clients (npx launcher)**
+
+Some clients cannot connect to remote HTTP servers directly. OpusClip publishes an npm launcher, [`@opusclip/mcp`](https://www.npmjs.com/package/@opusclip/mcp), that bridges stdio to the hosted server:
+
+```json
+{
+  "mcpServers": {
+    "opusclip": {
+      "command": "npx",
+      "args": ["-y", "@opusclip/mcp"]
+    }
+  }
+}
+```
+
+On the first tool call, a browser window opens to sign in and approve access. Same OAuth flow, same account, same credits. Needs Node.js 18+.
 
 ### Setup with an API key
 
@@ -60,6 +87,8 @@ The connector exposes a large tool set. These are the ones this system leans on:
 | `repurpose` | Re-edit a clip natively for a target platform |
 | `schedule_post` | Queue a finished clip to social accounts |
 
+Beyond these, the server can generate thumbnails and platform-specific social copy (titles, descriptions, hashtags), pull transcripts, group clips into collections, and report remaining credits on your plan.
+
 ### Where it fits in this system
 
 ```
@@ -82,4 +111,5 @@ newsletter → reels-scripting → record long-form
 - Clipping and exporting spend OpusClip credits from your connected account. Check your plan before batch runs.
 - The server needs a hosted video URL or an OpusClip project to work on. Upload or import your recording to OpusClip first if it only exists locally.
 - The API key endpoint sits on the same base as OpusClip's REST API (`https://api.opus.pro/api`). One key covers both.
+- The server is listed in the official MCP Registry as `io.github.opus-pro/opusclip`.
 - Official docs: [opus.pro/mcp](https://www.opus.pro/mcp) and [help.opus.pro/api-reference/agent-setup](https://help.opus.pro/api-reference/agent-setup).
