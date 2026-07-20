@@ -15,7 +15,7 @@ The server is hosted and speaks streamable HTTP. There are two endpoints, one pe
 | `https://mcp.opus.pro/mcp` | OAuth (browser sign-in) | Interactive clients: Claude web and desktop, Claude Code on your machine, Cursor |
 | `https://api.opus.pro/api/mcp` | API key (`Authorization: Bearer`) | Headless or remote environments where a browser sign-in flow is not possible |
 
-Your OpusClip plan and credits carry through on both.
+Your OpusClip plan and credits carry through on both. The OAuth endpoint is the canonical one. OpusClip's own npm launcher points at it, and their docs treat it as the default. The API key endpoint sits on the REST API base and follows the auth scheme in [OpusClip's agent setup docs](https://help.opus.pro/api-reference/agent-setup). Confirm it against your dashboard before wiring it into automation.
 
 ### Setup with OAuth
 
