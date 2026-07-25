@@ -1,0 +1,21 @@
+{
+  "name": "bunker-essentials-video",
+  "version": "1.0.0",
+  "description": "Educational explainer: How having a bunker and stocking essentials works",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render BunkerEssentials out/video.mp4",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/transitions": "4.0.376",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.376"
+  },
+  "devDependencies": {
+    "@remotion/cli": "4.0.376",
+    "@types/react": "19.0.0",
+    "typescript": "5.7.2"
+  }
+}
