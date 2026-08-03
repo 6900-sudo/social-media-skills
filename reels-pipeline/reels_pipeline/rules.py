@@ -37,12 +37,26 @@ def _hook_text(text: str) -> str:
     return _section(text, "Hook")
 
 
+def _spoken_text(text: str) -> str:
+    """The spoken-aloud sections only (Hook, Point 1..N, CTA), joined.
+
+    Everything the scorer judges as *delivery* — staccato, duration — must run
+    on this, not the whole markdown, so section headers and metadata lines don't
+    read as sentences.
+    """
+    parts = [_section(text, "Hook")]
+    for i in range(1, 11):
+        body = _section(text, f"Point {i}")
+        if not body:
+            break
+        parts.append(body)
+    parts.append(_section(text, "CTA"))
+    return "\n".join(p for p in parts if p)
+
+
 def _spoken_words(text: str) -> list[str]:
     """Words from the script's spoken sections (Hook, Point, CTA), not prose."""
-    spoken: list[str] = []
-    for header in ("Hook", "Point 1", "Point 2", "CTA"):
-        spoken.extend(re.findall(r"[A-Za-z']+", _section(text, header)))
-    return spoken
+    return re.findall(r"[A-Za-z']+", _spoken_text(text))
 
 
 def score_script(text: str) -> tuple[int, list[Violation]]:
@@ -66,8 +80,8 @@ def score_script(text: str) -> tuple[int, list[Violation]]:
     if re.search(r"link in bio", text, re.IGNORECASE):
         violations.append(Violation("no-link-in-bio", "Uses 'link in bio'.", 10))
 
-    # Three or more staccato fragments in a row.
-    if _has_staccato_run(text):
+    # Three or more staccato fragments in a row (spoken lines only).
+    if _has_staccato_run(_spoken_text(text)):
         violations.append(
             Violation("staccato-run", "Three or more short fragments in a row. Combine them.", 10)
         )
