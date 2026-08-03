@@ -1,6 +1,7 @@
 import React from 'react';
 import {Composition} from 'remotion';
 import {ScriptReel} from './ScriptReel';
+import {TransferReel} from './TransferReel';
 import {LangSmithReel} from './LangSmithReel';
 import {ClaudeMdReel} from './ClaudeMdReel';
 import {CostReel} from './CostReel';
@@ -52,6 +53,35 @@ export const RemotionRoot: React.FC = () => {
           trigger: 'SCRIPT',
           accentA: '#8B5CF6',
           accentB: '#22D3EE',
+        }}
+      />
+      {/* TransferReel — scene-based news/transfer reel: studio intro -> player
+          cards -> window countdown, over a VO. Graphics only, no footage. */}
+      <Composition
+        id="TransferReel"
+        component={TransferReel}
+        durationInFrames={900}
+        fps={30}
+        width={1080}
+        height={1920}
+        calculateMetadata={({props}) => {
+          const fps = 30;
+          const voDurS = (props as {voDurS?: number}).voDurS;
+          return {durationInFrames: voDurS ? Math.ceil((voDurS + 0.4) * fps) : 900, fps};
+        }}
+        defaultProps={{
+          title: 'LIVERPOOL — THE WINDOW',
+          intro: 'Right. Liverpool have got work to do.',
+          players: [
+            {name: 'BRADLEY BARCOLA', meta: 'PSG · Left wing', note: 'Pace, directness and end product.'},
+            {name: 'MOHAMED SALAH', meta: 'The talisman', note: 'The contract question that will not go away.'},
+          ],
+          windowLabel: 'Transfer window',
+          windowDaysLeft: 12,
+          cta: 'Comment REDS for the breakdown',
+          trigger: 'REDS',
+          accentA: '#C8102E',
+          accentB: '#F6EB61',
         }}
       />
       {/* CRAFTED motion graphics (custom easing + layered depth), NO text */}
