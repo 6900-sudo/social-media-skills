@@ -16,7 +16,8 @@ This skill needs:
 
 - `APIFY_API_TOKEN` environment variable (Instagram scraping)
 - `GOOGLE_AI_API_KEY` environment variable (Gemini 2.5 Flash video analysis)
-- Node.js 18+ and the `apify-client` and `@google/generative-ai` packages
+- For the CLI path: Python 3.9+ with `apify-client` and `google-genai` (see "Two ways to run" below)
+- For the manual path: Node.js 18+ and the `apify-client` and `@google/generative-ai` packages
 
 If either env var is missing, tell the user to run:
 
@@ -26,6 +27,17 @@ If either env var is missing, tell the user to run:
 ```
 
 Then stop until both are set.
+
+## Two ways to run this
+
+There is a scriptable CLI that packages Steps 3 to 6 (scrape, analyse, write, score) as commands: [`reels-pipeline/cli.py`](../../reels-pipeline/) in this repo (also set up at `/root/reels-pipeline/`). It uses the same Apify actors, the same Gemini 2.5 Flash prompt, and the same script structure and QA rules described below.
+
+- **CLI path (recommended when the pipeline is installed):** run the `python cli.py ...` command shown under each step. Fastest end to end: `python cli.py run "<reel-url>" --topic "<topic>"`.
+- **Manual path (fallback):** write and run the Node.js scripts described in each step. Use this when the CLI is not available.
+
+Either way, Steps 1, 2, and 5's voice-matching still need you: read the voice files and do the creative pass. The CLI scaffolds and guards; it does not replace the voice work.
+
+The CLI's requirements are `apify-client` and `google-genai` (install with `pip install -r reels-pipeline/requirements.txt`).
 
 ## Step 1. Get the reference
 
@@ -47,7 +59,9 @@ Wait for the topic. Read newsletter-voice.md, voice.md, and about-me.md from the
 
 ## Step 3. Scrape and download the Reel
 
-Create `~/Desktop/Reels/` if it does not exist. Write a Node.js script at `~/Desktop/Reels/analyse-reel.js` that:
+**CLI:** `python cli.py scrape "<reel-url>"` — scrapes, downloads the video to `~/Desktop/Reels/downloads/`, and writes the raw JSON. Skip the manual steps below if you use it.
+
+**Manual:** Create `~/Desktop/Reels/` if it does not exist. Write a Node.js script at `~/Desktop/Reels/analyse-reel.js` that:
 
 1. Uses `apify-client` to call `apify/instagram-reel-scraper` with `{ directUrls: [reelUrl], resultsLimit: 1 }`. If that returns no items, fall back to `{ urls: [reelUrl], resultsLimit: 1 }`, then `apify/instagram-scraper` with `{ directUrls: [reelUrl], resultsType: 'posts', resultsLimit: 1 }`.
 2. Extracts `videoUrl` from the returned item.
@@ -58,7 +72,9 @@ Run the script. Confirm file size and metadata (views, likes, comments, caption 
 
 ## Step 4. Analyse with Gemini 2.5 Flash
 
-Extend the Node script (or run a second pass) that:
+**CLI:** `python cli.py analyze "<video-path>" --audience "<audience from about-me.md>"` — sends the video to Gemini 2.5 Flash with the exact prompt below and saves the analysis. Skip the manual steps if you use it.
+
+**Manual:** Extend the Node script (or run a second pass) that:
 
 1. Reads the downloaded `.mp4` as base64.
 2. Calls `genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })`.
@@ -94,6 +110,8 @@ I'm studying this Reel to write my own script in a similar style for my audience
 Save the analysis to `~/Desktop/Reels/analysis_reference_{shortCode}.md`.
 
 ## Step 5. Write the new Reel script
+
+**CLI:** `python cli.py write --topic "<topic>" --analysis "<analysis-path>" --trigger <WORD>` scaffolds `~/Desktop/Reels/reel-[slug].md` in the exact structure below, pre-filled with the reference metrics. You still do the creative pass: fill the hook, points, CTA, and caption in the user's voice using the analysis and voice files.
 
 Using the analysis from Step 4, the newsletter topic from Step 2, and the user's voice files, write a new Reel script to `~/Desktop/Reels/reel-[slug].md`.
 
@@ -169,6 +187,8 @@ Apply these rules (non-negotiable):
 ```
 
 ## Step 6. QA loop
+
+**CLI:** `python cli.py score "<script-path>"` runs the mechanical checks (opening "I", staccato runs, comment-trigger format, point count, read-aloud duration, em dashes, semicolons, "link in bio") and exits non-zero until the script clears 95/100. Use it as the first gate, then apply your own judgement on top for anything the checks cannot catch (voice match, whether the conclusion is stated).
 
 Score the script against the rules in Step 5. Every violation must be fixed. Re-score until the script hits 95/100. Never show the user anything below 95.
 
