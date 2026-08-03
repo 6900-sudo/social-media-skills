@@ -7,6 +7,7 @@ Implements the reels-scripting skill as a scriptable CLI:
     analyze  -> Gemini 2.5 Flash video analysis        (Step 4)
     write    -> new Reel script scaffold               (Step 5)
     score    -> QA the script against the rules        (Step 6)
+    render   -> render the script to an MP4 (Remotion)  (Step 7)
     run      -> scrape + analyze + write end to end
 
 Examples:
@@ -18,6 +19,9 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,6 +30,7 @@ from reels_pipeline.analyzer import AnalysisError, analyse_video
 from reels_pipeline.config import Config, MissingCredentials
 from reels_pipeline.rules import format_report, score_script
 from reels_pipeline.scraper import ScrapeError, download_reel, scrape_reel
+from reels_pipeline.scriptfile import parse_script
 from reels_pipeline.writer import save_analysis, write_script
 
 
@@ -132,6 +137,78 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_project(args: argparse.Namespace) -> Path:
+    if getattr(args, "project", None):
+        return Path(args.project).expanduser().resolve()
+    # cli.py lives in reels-pipeline/; reel-video is its sibling at the repo root.
+    return Path(__file__).resolve().parent.parent / "reel-video"
+
+
+def _load_props(spec: str | None) -> dict:
+    if not spec:
+        return {}
+    if spec.startswith("@"):
+        return json.loads(Path(spec[1:]).expanduser().read_text())
+    return json.loads(spec)
+
+
+def cmd_render(args: argparse.Namespace) -> int:
+    project = _resolve_project(args)
+    if not (project / "package.json").exists():
+        print(f"error: Remotion project not found at {project}. Pass --project.", file=sys.stderr)
+        return 2
+    if not (project / "node_modules").exists():
+        print(
+            f"error: dependencies not installed. Run: (cd {project} && npm install)",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.composition:
+        composition = args.composition
+        props = _load_props(args.props)
+        slug = args.out_slug or composition
+    else:
+        if not args.script:
+            print(
+                "error: provide a script path, or use --composition <id> --props <json>.",
+                file=sys.stderr,
+            )
+            return 2
+        composition = "ScriptReel"
+        props = parse_script(args.script)
+        slug = Path(args.script).stem.replace("reel-", "") or "scriptreel"
+
+    if args.vo:
+        props["voSrc"] = args.vo
+    if args.vo_dur is not None:
+        props["voDurS"] = args.vo_dur
+
+    out = Path(args.out).expanduser() if args.out else (project / "out" / f"{slug}.mp4")
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    cmd = ["npx", "remotion", "render", composition, str(out), f"--props={json.dumps(props)}"]
+    if args.frames:
+        cmd.append(f"--frames={args.frames}")
+    # In locked-down environments Remotion cannot download its Chromium; point it
+    # at a preinstalled browser via REMOTION_BROWSER_EXECUTABLE when set.
+    browser = os.environ.get("REMOTION_BROWSER_EXECUTABLE")
+    if browser:
+        cmd.append(f"--browser-executable={browser}")
+    print(f"Rendering {composition} -> {out}")
+    print("  props:", json.dumps(props)[:300])
+    try:
+        result = subprocess.run(cmd, cwd=str(project))
+    except FileNotFoundError:
+        print("error: npx not found. Install Node.js 18+ to render.", file=sys.stderr)
+        return 2
+    if result.returncode != 0:
+        print(f"error: remotion render failed (exit {result.returncode}).", file=sys.stderr)
+        return result.returncode
+    print(f"Done: {out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cli.py",
@@ -176,6 +253,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--title", help="Script title.")
     p_run.add_argument("--trigger", default="SCRIPT", help="Comment trigger word (caps).")
     p_run.set_defaults(func=cmd_run)
+
+    p_render = sub.add_parser("render", help="Render a script (or any composition) to MP4 via Remotion.")
+    p_render.add_argument("script", nargs="?", help="Path to reel-[slug].md (renders ScriptReel).")
+    p_render.add_argument("--composition", help="Render this composition id instead of ScriptReel (passthrough).")
+    p_render.add_argument("--props", help="Props JSON string or @file (passthrough mode).")
+    p_render.add_argument("--vo", help="Voiceover path relative to public/ (e.g. vo/slug.mp3).")
+    p_render.add_argument("--vo-dur", type=float, dest="vo_dur", help="Voiceover length in seconds (sizes ScriptReel).")
+    p_render.add_argument("--project", help="Path to the reel-video Remotion project (default: sibling of the repo).")
+    p_render.add_argument("--out", help="Output MP4 path (default: <project>/out/<slug>.mp4).")
+    p_render.add_argument("--out-slug", dest="out_slug", help="Slug for the default output filename (passthrough mode).")
+    p_render.add_argument("--frames", help="Frame range to render, e.g. 0-60 (quick preview).")
+    p_render.set_defaults(func=cmd_render)
 
     return parser
 

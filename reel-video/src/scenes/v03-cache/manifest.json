@@ -1,0 +1,9 @@
+{
+  "slug": "v03-cache",
+  "topic": "prompt caching cuts AI cost 90%",
+  "beats": [
+    { "kind": "hook", "concept": "repeated full-price resend of the same prompt", "techniques": ["send-rail-ghost-trail", "full-price-stamp-meter", "resend-tally", "billing-odometer"] },
+    { "kind": "insight", "concept": "static-prefix cache vault with instant cache-hit lightning", "techniques": ["prefix-suffix-split-bar", "locking-cache-vault", "cache-hit-lightning-link", "hit-stamp"] },
+    { "kind": "proof", "concept": "twin cost bars showing a 90 percent drop", "techniques": ["twin-cost-bars", "delta-bracket", "minus-90-snap", "identical-output-check"] }
+  ]
+}

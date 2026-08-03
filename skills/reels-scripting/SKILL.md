@@ -29,7 +29,7 @@ Then stop until both are set.
 
 ## The pipeline CLI
 
-Steps 3 to 6 run through the [`reels-pipeline/cli.py`](../../reels-pipeline/) CLI in this repo (also set up at `/root/reels-pipeline/`). Install its requirements once with `pip install -r reels-pipeline/requirements.txt`, then run the commands from that directory.
+Steps 3 to 7 run through the [`reels-pipeline/cli.py`](../../reels-pipeline/) CLI in this repo (also set up at `/root/reels-pipeline/`). Install its requirements once with `pip install -r reels-pipeline/requirements.txt`, then run the commands from that directory. Step 7 (render) additionally uses the [`reel-video`](../../reel-video/) Remotion project — run `npm install` in it once.
 
 The fastest route is the full pipeline in one command:
 
@@ -202,14 +202,27 @@ Common violations to check:
 - 3 points instead of 2
 - Caption does not mirror script
 
-## Step 7. Offer the pipeline
+## Step 7. Render the video
 
 After the script is approved, offer:
 
 > Two paths from here:
 >
 > 1. Record it yourself.
-> 2. Auto-generate with ElevenLabs (voice) + HeyGen (avatar) + Remotion (motion graphics). If you have the my-video project configured, run `npm run pipeline:claude-routines` with this script config.
+> 2. Auto-generate the video from this script.
+
+For path 2, use the `reel-video` Remotion project (repo-root sibling; run `npm install` in it once). The flow:
+
+1. **Voiceover (ElevenLabs).** Synthesise the spoken lines (hook + both points + CTA) into `reel-video/public/vo/{slug}.mp3` using the ElevenLabs MCP `text_to_speech` tool. Note the audio length in seconds.
+2. **Render.** From `reels-pipeline/`, run:
+
+   ```
+   python cli.py render <script.md> --vo vo/{slug}.mp3 --vo-dur <seconds>
+   ```
+
+   This parses the script into the `ScriptReel` composition (hook, points, CTA, VO-tracked captions) and renders `reel-video/out/{slug}.mp4`. `--vo-dur` sizes the video to the voiceover so it never cuts off.
+
+To drive one of the project's bespoke compositions instead of the generic `ScriptReel`, pass `--composition <id> --props <json|@file>` (see `reel-video/src/Root.tsx` for ids and prop shapes).
 
 ## Rules
 

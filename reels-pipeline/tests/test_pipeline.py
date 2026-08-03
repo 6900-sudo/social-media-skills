@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from reels_pipeline.rules import score_script  # noqa: E402
 from reels_pipeline.scraper import short_code_from_url  # noqa: E402
+from reels_pipeline.scriptfile import parse_script  # noqa: E402
 from reels_pipeline.writer import slugify  # noqa: E402
 
 
@@ -42,6 +43,44 @@ SCRIPT
 """
     score, violations = score_script(text)
     assert score == 100, violations
+
+
+def test_parse_script(tmp_path=None):
+    import tempfile
+
+    md = """\
+# Reel: AI agents beat prompt libraries
+
+## Hook (0-3s)
+This changed how you build with AI forever.
+
+## Point 1 (3-20s)
+You just drop the reference in and it does the heavy lifting for you.
+
+## Point 2 (20-40s)
+The result feels like magic but it is really just good structure.
+
+## CTA (40-45s)
+Comment SCRIPT and I'll send you the template.
+
+## Caption
+[Mirror the script.]
+
+## Comment trigger
+SCRIPT
+"""
+    d = tempfile.mkdtemp()
+    p = Path(d) / "reel-ai-agents.md"
+    p.write_text(md)
+    props = parse_script(p)
+    assert props["title"] == "AI agents beat prompt libraries"
+    assert props["hook"].startswith("This changed how you build")
+    assert len(props["points"]) == 2
+    assert "heavy lifting" in props["points"][0]
+    assert props["cta"].startswith("Comment SCRIPT")
+    assert props["trigger"] == "SCRIPT"
+    # Untouched placeholder caption is dropped, not rendered literally.
+    assert props["caption"] == ""
 
 
 def test_score_flags_violations():
