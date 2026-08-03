@@ -1,4 +1,8 @@
-"""Analyse a downloaded Reel with Gemini 2.5 Flash (Step 4 of the skill)."""
+"""Analyse a downloaded Reel with Gemini 2.5 Flash (Step 4 of the skill).
+
+Uses the ``google-genai`` SDK (the current, supported client; the older
+``google-generativeai`` package is deprecated).
+"""
 
 from __future__ import annotations
 
@@ -55,22 +59,23 @@ def analyse_video(
 
     api_key = config.require_google()
     try:  # optional import keeps `--help` usable without the SDK installed
-        import google.generativeai as genai
+        from google import genai
     except ImportError as exc:  # pragma: no cover - depends on install state
         raise AnalysisError(
-            "google-generativeai is not installed. "
-            "Run: pip install google-generativeai"
+            "google-genai is not installed. Run: pip install google-genai"
         ) from exc
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
-    # The File API handles videos of any size; inline base64 only suits tiny clips.
-    uploaded = genai.upload_file(path=str(video_path))
-    uploaded = _wait_until_active(genai, uploaded)
+    # The File API handles videos of any size; inline bytes only suit tiny clips.
+    uploaded = client.files.upload(file=str(video_path))
+    uploaded = _wait_until_active(client, uploaded)
 
-    model = genai.GenerativeModel(config.gemini_model)
     prompt = build_prompt(audience)
-    response = model.generate_content([prompt, uploaded])
+    response = client.models.generate_content(
+        model=config.gemini_model,
+        contents=[uploaded, prompt],
+    )
 
     text = getattr(response, "text", None)
     if not text:
@@ -78,14 +83,14 @@ def analyse_video(
     return text
 
 
-def _wait_until_active(genai, uploaded, timeout: float = 300.0):
+def _wait_until_active(client, uploaded, timeout: float = 300.0):
     """Poll the uploaded file until Gemini finishes processing it."""
     deadline = time.time() + timeout
     while getattr(uploaded.state, "name", "ACTIVE") == "PROCESSING":
         if time.time() > deadline:
             raise AnalysisError("Timed out waiting for Gemini to process the video.")
         time.sleep(3)
-        uploaded = genai.get_file(uploaded.name)
+        uploaded = client.files.get(name=uploaded.name)
     if getattr(uploaded.state, "name", "ACTIVE") == "FAILED":
         raise AnalysisError("Gemini failed to process the uploaded video.")
     return uploaded

@@ -62,5 +62,5 @@ into CI or a pre-commit check.
 - If every Apify actor variant fails, the CLI reports the failure and stops. It
   never fabricates analysis.
 - Gemini 2.5 Flash is the model. Do not substitute without approval.
-- `apify-client` and `google-generativeai` are imported lazily, so `--help`,
+- `apify-client` and `google-genai` are imported lazily, so `--help`,
   `write`, and `score` work before those packages are installed.
