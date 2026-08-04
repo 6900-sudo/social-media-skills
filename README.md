@@ -71,6 +71,7 @@ See each skill's `SKILL.md` for trigger phrases, inputs, and dependencies.
 | [gemini-carousel](skills/gemini-carousel/) | Slide-by-slide carousel generator with an approval gate. |
 | [quote-post](skills/quote-post/) | Claude writes the quote, Gemini recreates the image with the quote baked in. |
 | [analytics-dashboard](skills/analytics-dashboard/) | LinkedIn Analytics export to interactive React dashboard plus 5 data-backed recommendations. |
+| [remove-face-online](skills/remove-face-online/) | Remove your face and photos from the web. Removal map, takedown request templates (privacy, GDPR, CCPA), search de-indexing, data broker opt-outs, and a tracker file. |
 <!-- SKILLS:END -->
 
 ## Installation
@@ -161,6 +162,9 @@ Once installed, ask Claude to help with content tasks and it will pick the right
 
 ### Analytics
 - `analytics-dashboard` — LinkedIn export to dashboard + 5 recommendations
+
+### Privacy
+- `remove-face-online` — scrub your face and photos from search, sites, and data brokers
 
 ## Prerequisites
 
