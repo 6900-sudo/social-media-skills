@@ -1,5 +1,12 @@
 # Versions
 
+## 1.1.0 — 2026-08-04
+
+Added a privacy skill.
+
+**Privacy**
+- remove-face-online
+
 ## 1.0.0 — 2026-04-22
 
 Initial release. 17 skills covering the full content system documented in the MarTech AI newsletter.
