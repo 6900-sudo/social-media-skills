@@ -16,7 +16,7 @@ This skill needs:
 
 - `APIFY_API_TOKEN` environment variable (Instagram scraping)
 - `GOOGLE_AI_API_KEY` environment variable (Gemini 2.5 Flash video analysis)
-- Node.js 18+ and the `apify-client` and `@google/generative-ai` packages
+- Python 3.9+ with `apify-client` and `google-genai`
 
 If either env var is missing, tell the user to run:
 
@@ -26,6 +26,20 @@ If either env var is missing, tell the user to run:
 ```
 
 Then stop until both are set.
+
+## The pipeline CLI
+
+Steps 3 to 7 run through the [`reels-pipeline/cli.py`](../../reels-pipeline/) CLI in this repo (also set up at `/root/reels-pipeline/`). Install its requirements once with `pip install -r reels-pipeline/requirements.txt`, then run the commands from that directory. Step 7 (render) additionally uses the [`reel-video`](../../reel-video/) Remotion project — run `npm install` in it once.
+
+The fastest route is the full pipeline in one command:
+
+```
+python cli.py run "<reel-url>" --topic "<topic>" --audience "<audience from about-me.md>" --trigger <WORD>
+```
+
+That runs scrape → analyse → write → score end to end. Run the individual commands (Steps 3 to 6 below) when you want to inspect the output between stages, or re-run just one.
+
+The CLI does the scraping, Gemini analysis, scaffolding, and mechanical QA. It does **not** replace the voice work: Steps 1, 2, and the creative pass in Step 5 are still yours. Read the voice files and write the lines yourself.
 
 ## Step 1. Get the reference
 
@@ -47,22 +61,21 @@ Wait for the topic. Read newsletter-voice.md, voice.md, and about-me.md from the
 
 ## Step 3. Scrape and download the Reel
 
-Create `~/Desktop/Reels/` if it does not exist. Write a Node.js script at `~/Desktop/Reels/analyse-reel.js` that:
+```
+python cli.py scrape "<reel-url>"
+```
 
-1. Uses `apify-client` to call `apify/instagram-reel-scraper` with `{ directUrls: [reelUrl], resultsLimit: 1 }`. If that returns no items, fall back to `{ urls: [reelUrl], resultsLimit: 1 }`, then `apify/instagram-scraper` with `{ directUrls: [reelUrl], resultsType: 'posts', resultsLimit: 1 }`.
-2. Extracts `videoUrl` from the returned item.
-3. Downloads the video to `~/Desktop/Reels/downloads/{username}_{shortCode}.mp4`.
-4. Saves raw scrape data to `~/Desktop/Reels/reel_data_{shortCode}.json`.
+This tries `apify/instagram-reel-scraper` (`directUrls`, then `urls`), falls back to `apify/instagram-scraper`, downloads the video to `~/Desktop/Reels/downloads/{username}_{shortCode}.mp4`, and writes the raw scrape to `~/Desktop/Reels/reel_data_{shortCode}.json`. Confirm file size and metadata (views, likes, comments, caption first 200 chars) before continuing.
 
-Run the script. Confirm file size and metadata (views, likes, comments, caption first 200 chars) before continuing.
+If the scrape fails across all three actor variants, the CLI reports the failure and stops. Do not fabricate analysis.
 
 ## Step 4. Analyse with Gemini 2.5 Flash
 
-Extend the Node script (or run a second pass) that:
+```
+python cli.py analyze "<video-path>" --audience "<audience from about-me.md>"
+```
 
-1. Reads the downloaded `.mp4` as base64.
-2. Calls `genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })`.
-3. Sends the video with this exact prompt:
+This sends the downloaded video to Gemini 2.5 Flash and saves the analysis. The exact prompt the CLI sends — and therefore what the analysis covers — is:
 
 ```
 I'm studying this Reel to write my own script in a similar style for my audience of [AUDIENCE FROM about-me.md].
@@ -91,11 +104,15 @@ I'm studying this Reel to write my own script in a similar style for my audience
 - The single most important technique to learn from this Reel
 ```
 
-Save the analysis to `~/Desktop/Reels/analysis_reference_{shortCode}.md`.
+The analysis is saved to `~/Desktop/Reels/analysis_reference_{shortCode}.md`.
 
 ## Step 5. Write the new Reel script
 
-Using the analysis from Step 4, the newsletter topic from Step 2, and the user's voice files, write a new Reel script to `~/Desktop/Reels/reel-[slug].md`.
+```
+python cli.py write --topic "<topic>" --analysis "<analysis-path>" --trigger <WORD>
+```
+
+This scaffolds `~/Desktop/Reels/reel-[slug].md` in the structure below, pre-filled with the reference metrics. Then do the creative pass yourself: using the analysis from Step 4, the newsletter topic from Step 2, and the user's voice files, fill the hook, points, CTA, and caption in the user's voice.
 
 Apply these rules (non-negotiable):
 
@@ -170,7 +187,11 @@ Apply these rules (non-negotiable):
 
 ## Step 6. QA loop
 
-Score the script against the rules in Step 5. Every violation must be fixed. Re-score until the script hits 95/100. Never show the user anything below 95.
+```
+python cli.py score "<script-path>"
+```
+
+This runs the mechanical checks (opening "I", staccato runs, comment-trigger format, point count, read-aloud duration, em dashes, semicolons, "link in bio") and exits non-zero until the script clears 95/100. Use it as the first gate, then apply your own judgement on top for what the checks cannot catch (voice match, whether the conclusion is stated). Every violation must be fixed. Re-score until the script hits 95/100. Never show the user anything below 95.
 
 Common violations to check:
 - Opens with "I"
@@ -181,14 +202,27 @@ Common violations to check:
 - 3 points instead of 2
 - Caption does not mirror script
 
-## Step 7. Offer the pipeline
+## Step 7. Render the video
 
 After the script is approved, offer:
 
 > Two paths from here:
 >
 > 1. Record it yourself.
-> 2. Auto-generate with ElevenLabs (voice) + HeyGen (avatar) + Remotion (motion graphics). If you have the my-video project configured, run `npm run pipeline:claude-routines` with this script config.
+> 2. Auto-generate the video from this script.
+
+For path 2, use the `reel-video` Remotion project (repo-root sibling; run `npm install` in it once). The flow:
+
+1. **Voiceover (ElevenLabs).** Synthesise the spoken lines (hook + both points + CTA) into `reel-video/public/vo/{slug}.mp3` using the ElevenLabs MCP `text_to_speech` tool. Note the audio length in seconds.
+2. **Render.** From `reels-pipeline/`, run:
+
+   ```
+   python cli.py render <script.md> --vo vo/{slug}.mp3 --vo-dur <seconds>
+   ```
+
+   This parses the script into the `ScriptReel` composition (hook, points, CTA, VO-tracked captions) and renders `reel-video/out/{slug}.mp4`. `--vo-dur` sizes the video to the voiceover so it never cuts off.
+
+To drive one of the project's bespoke compositions instead of the generic `ScriptReel`, pass `--composition <id> --props <json|@file>` (see `reel-video/src/Root.tsx` for ids and prop shapes).
 
 ## Rules
 
