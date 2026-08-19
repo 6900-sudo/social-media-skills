@@ -2,6 +2,7 @@ import React from 'react';
 import {Composition} from 'remotion';
 import {ScriptReel} from './ScriptReel';
 import {TransferReel} from './TransferReel';
+import {NewsReel} from './NewsReel';
 import {LangSmithReel} from './LangSmithReel';
 import {ClaudeMdReel} from './ClaudeMdReel';
 import {CostReel} from './CostReel';
@@ -82,6 +83,36 @@ export const RemotionRoot: React.FC = () => {
           trigger: 'REDS',
           accentA: '#C8102E',
           accentB: '#F6EB61',
+        }}
+      />
+      {/* NewsReel — generic news/stat reel: headline -> stat cards -> kicker.
+          Defaults carry the UK university insolvency story. */}
+      <Composition
+        id="NewsReel"
+        component={NewsReel}
+        durationInFrames={960}
+        fps={30}
+        width={1080}
+        height={1920}
+        calculateMetadata={({props}) => {
+          const fps = 30;
+          const voDurS = (props as {voDurS?: number}).voDurS;
+          return {durationInFrames: voDurS ? Math.ceil((voDurS + 0.4) * fps) : 960, fps};
+        }}
+        defaultProps={{
+          eyebrow: 'UK higher education',
+          headline: '24 universities could close within a year',
+          stats: [
+            {value: '24', label: 'providers at risk of market exit', context: 'Parliament warns of an insolvency crisis'},
+            {value: '12,000+', label: 'job cuts announced', context: 'across the sector'},
+            {value: '£20m+', label: 'Dundee deficit', context: 'at a single university'},
+            {value: 'Aug 2026', label: 'Essex closes its Southend campus', context: 'confirmed'},
+            {value: '£9,250 → £6,000', label: 'tuition fees frozen since 2017', context: "that's the real-terms value today after inflation"},
+          ],
+          kicker: 'The warning signs are everywhere.',
+          source: 'Source: Parliament · sector reports',
+          accentA: '#DC2626',
+          accentB: '#F59E0B',
         }}
       />
       {/* CRAFTED motion graphics (custom easing + layered depth), NO text */}
