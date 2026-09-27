@@ -224,6 +224,29 @@ For path 2, use the `reel-video` Remotion project (repo-root sibling; run `npm i
 
 To drive one of the project's bespoke compositions instead of the generic `ScriptReel`, pass `--composition <id> --props <json|@file>` (see `reel-video/src/Root.tsx` for ids and prop shapes).
 
+### Path 3: news-presenter lipsync + narrated B-roll (the standard "podcaster" format)
+
+Use this format whenever the user wants a real talking presenter instead of caption cards — this is now the default house style for that ask. It's built entirely from vidIQ MCP tools (`vidiq_*`), separate from the user's personal ElevenLabs quota.
+
+**Vertical (1080x1920), no text/word cards anywhere.** Structure: a short lip-synced avatar intro, then real narration over stock B-roll for the rest.
+
+1. **Check the budget first.** `vidiq_balance` — never submit a paid call blind. Observed costs on this account (confirm per-account, they can vary):
+   - `vidiq_generate_video`, model `veo-3.1-fast`, 720p, 8s (min duration for `ingredients`) → **240 credits**
+   - same model, 4s → **120 credits**
+   - `gemini-omni-flash` (the "budget" model), 3s, 720p → **60 credits**
+   - `vidiq_voiceover_generate` → **14 credits / 1000 characters**
+   - `vidiq_generate_broll` (stock clip search) → **1 credit/call**
+   - `vidiq_compose` (final assembly/render) → **10 credits**
+   - A monthly plan resets ~150 credits. A single 4s avatar intro (120) + one voiceover (14) + 3 broll searches (3) + compose (10) = **147 credits — the whole monthly budget for one video.** Budget accordingly; a full-script avatar (multiple 8s dialogue clips) needs 500-1000+ credits and is not affordable on the base plan.
+2. **Generate the avatar intro.** One `vidiq_generate_video` call, model `veo-3.1-fast`, `aspectRatio: "9:16"`, the shortest duration that fits the hook line (usually 4s). Write the dialogue in quotes inside the prompt along with a consistent character description (age, clothing, studio setting) — Veo lip-syncs to the quoted words directly, no separate avatar image or lipsync step needed. **Keep the presenter generic and synthetic** — never model it on a real named person (not the story's subject, not a real journalist). Poll with `vidiq_job_poll` until `completed`; the result's `videoUrl` is the clip.
+3. **Generate the narration** for everything after the hook (`vidiq_voiceover_generate`, pick a voice via `vidiq_voiceover_list_voices` matching the story's tone/accent). Note the returned `durationSeconds` — it's a signed URL, good for ~12h, so use it promptly.
+4. **Pull B-roll** (`vidiq_generate_broll`, `orientation: "portrait"`). Pick generic, non-identifiable institutional/city shots (a plain building, a skyline, an aerial). **Never use a distinctly identifiable real landmark that isn't actually the story's location** (e.g. Big Ben, a named foreign city hall) — that misrepresents place to the viewer even as "just B-roll." When the search results are all generic enough, reuse the same cached results across scenes rather than re-querying (saves credits).
+5. **Compose** (`vidiq_compose`, `format: "vertical"`): scene 1 = the avatar clip with `keepNativeAudio: true`; scenes 2+ = B-roll, muted, with a short `fade` transitionIn; `voiceover.startAtSeconds` = the avatar clip's duration, so the real narration picks up exactly when the avatar stops talking. No `overlays` — that's what keeps this out of "sliding card" territory. Poll `vidiq_job_poll`; the result is a signed S3 URL on `remotionlambda-*.amazonaws.com` (this specific host is reachable for direct download in this environment; `videos.pexels.com` and other `*.s3.amazonaws.com` buckets are not — download the *finished compose output*, not the raw ingredients, if network egress is restricted).
+6. **Compress before sending.** The raw compose output can exceed the 30MB `SendUserFile` limit. Re-encode locally: `ffmpeg -c:v libx264 -preset slow -crf 20 -maxrate 6000k -bufsize 12000k -af "loudnorm=I=-15:TP=-1.5:LRA=11" -c:a aac -b:a 160k`. crf 20 preserves quality far better than crf 26+ while usually landing under 30MB for a ~40s clip.
+7. **Disclose it's synthetic.** The intro is a generated AI presenter. Note that plainly in the post caption/description (platforms increasingly require this for realistic AI people) — it's a one-line addition, not a caveat that needs dwelling on.
+
+**When credits run out mid-project:** don't silently reuse or regenerate — say so. The avatar clip and voiceover URLs are reusable within their validity window (voiceover ~12h) at zero extra cost for a re-compose; a *new* B-roll pairing or extended avatar dialogue needs fresh credits and must wait for the plan's reset (`vidiq_balance` reports `renewableResetsAt`).
+
 ## Rules
 
 - Never skip the 95/100 QA gate.
